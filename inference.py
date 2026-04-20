@@ -21,10 +21,17 @@ Usage
 from __future__ import annotations
 
 import os
+import sys
 import time
 import tempfile
 from pathlib import Path
 from typing import Union
+
+# ── TripoSR path bootstrap ────────────────────────────────────────────────────
+# TripoSR is not a pip package — it's used as a cloned repo on sys.path.
+_tsr_dir = Path(__file__).parent / "TripoSR"
+if _tsr_dir.exists() and str(_tsr_dir.resolve()) not in sys.path:
+    sys.path.insert(0, str(_tsr_dir.resolve()))
 
 import numpy as np
 import torch
@@ -165,17 +172,18 @@ class Reconstructor:
         t_infer_start = time.perf_counter()
         with torch.no_grad():
             scene_codes = model([pil_ready], device=self.device)
-            meshes = model.extract_mesh(
-                scene_codes,
-                has_vertex_color=False,
-                resolution=self.mesh_resolution,
-            )
+            # Voxels: query density field directly (no rtree / trimesh.contains)
+            voxels = self._density_to_voxels(model, scene_codes[0])
+            # Mesh: only extracted when we need to save an .obj file
+            mesh = None
+            if save_mesh:
+                meshes = model.extract_mesh(
+                    scene_codes,
+                    has_vertex_color=False,
+                    resolution=self.mesh_resolution,
+                )
+                mesh = meshes[0]
         t_infer_ms = (time.perf_counter() - t_infer_start) * 1000
-
-        mesh = meshes[0]
-
-        # ── Voxelise ──────────────────────────────────────────────────────────
-        voxels = self._mesh_to_voxels(mesh)
 
         # ── Save outputs ──────────────────────────────────────────────────────
         mesh_path = None
@@ -233,44 +241,58 @@ class Reconstructor:
         self._model.eval()
         return self._model
 
-    def _preprocess(self, pil: "Image.Image", *, remove_background: bool) -> "Image.Image":
-        """Resize, optionally remove BG, composite on white → RGB 512×512."""
-        pil = pil.resize((512, 512), Image.LANCZOS)
+    def _preprocess(self, pil: "Image.Image", *, remove_background: bool,
+                    foreground_ratio: float = 0.85) -> "Image.Image":
+        """
+        Official TripoSR preprocessing:
+          1. rembg background removal
+          2. resize_foreground — crop + pad so object fills foreground_ratio of frame
+          3. Composite on gray (0.5) — what TripoSR was trained with (NOT white)
+        """
+        from tsr.utils import remove_background as tsr_remove_bg, resize_foreground
+        import rembg as _rembg
 
         if remove_background:
-            if self._rembg is None:
-                self._rembg = _import_rembg()
-            pil_rgba = self._rembg(pil)
+            session = _rembg.new_session("u2net", providers=["CPUExecutionProvider"])
+            pil = tsr_remove_bg(pil, rembg_session=session)    # RGBA
+            pil = resize_foreground(pil, foreground_ratio)     # crop + pad
+            arr   = np.array(pil).astype(np.float32) / 255.0
+            rgb   = arr[:, :, :3]
+            alpha = arr[:, :, 3:4]
+            arr_rgb = rgb * alpha + 0.5 * (1 - alpha)          # gray fill
+            pil = Image.fromarray((arr_rgb * 255).astype(np.uint8))
         else:
-            pil_rgba = pil.convert("RGBA")
+            pil = pil.convert("RGB")
 
-        # Composite RGBA onto white
-        white = Image.new("RGBA", pil_rgba.size, (255, 255, 255, 255))
-        white.paste(pil_rgba, mask=pil_rgba.split()[3])
-        return white.convert("RGB")
+        return pil.resize((512, 512), Image.LANCZOS)
 
-    def _mesh_to_voxels(self, mesh) -> np.ndarray:
-        """Convert a trimesh.Trimesh to a (R, R, R) float32 occupancy grid."""
+    def _density_to_voxels(self, model, scene_code, threshold: float = 25.0) -> np.ndarray:
+        """
+        Query TripoSR's density field directly at a voxel_resolution³ grid.
+        Avoids mesh extraction and trimesh.contains (no rtree dependency).
+        """
+        from tsr.utils import scale_tensor
+
         R = self.voxel_resolution
+        lin = torch.linspace(0, 1, R)
+        gx, gy, gz = torch.meshgrid(lin, lin, lin, indexing="ij")
+        grid_verts = torch.stack([gx.ravel(), gy.ravel(), gz.ravel()], dim=1)
 
-        if mesh is None or len(mesh.vertices) == 0:
-            return np.zeros((R, R, R), dtype=np.float32)
+        radius = model.renderer.cfg.radius
+        pts = scale_tensor(
+            grid_verts.to(scene_code.device),
+            (0, 1),
+            (-radius, radius),
+        )
 
-        # Normalise to unit cube [-0.5, 0.5]³
-        verts = mesh.vertices.copy()
-        verts -= verts.mean(axis=0)
-        scale = np.abs(verts).max()
-        if scale > 0:
-            verts /= 2 * scale
-        mesh.vertices = verts
+        density = model.renderer.query_triplane(
+            model.decoder,
+            pts,
+            scene_code,
+        )["density_act"].squeeze(-1)   # (R³,)
 
-        # Grid of sample points
-        lin = np.linspace(-0.5, 0.5, R)
-        gx, gy, gz = np.meshgrid(lin, lin, lin, indexing="ij")
-        pts = np.stack([gx.ravel(), gy.ravel(), gz.ravel()], axis=1)
-
-        inside = mesh.contains(pts)
-        return inside.reshape(R, R, R).astype(np.float32)
+        voxel = (density > threshold).reshape(R, R, R)
+        return voxel.float().cpu().numpy()
 
     def _save_preview(
         self,

@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MM805 — 3D Reconstruction Presentation</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0b0f2e;
+    --navy2:   #0d1340;
+    --cyan:    #00c8e8;
+    --cyan2:   #4fd8f0;
+    --white:   #ffffff;
+    --grey:    #a0b0c8;
+    --accent:  #1a2560;
+  }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 16px;
+    color: var(--white);
+  }
+
+  /* ── Slide Shell ──────────────────────────────────────────── */
+  .slide {
+    position: relative;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    background: var(--navy);
+    flex-shrink: 0;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+  }
+
+  /* ── Shared Background SVG ──────────────────────────────────── */
+  .bg-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* ── Slide Counter ────────────────────────────────────────── */
+  .slide-num {
+    position: absolute;
+    bottom: 18px;
+    right: 24px;
+    font-size: 11px;
+    color: var(--grey);
+    opacity: 0.6;
+    letter-spacing: 1px;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+  ══════════════════════════════════════════════════════════ */
+  .s1-tag {
+    position: absolute;
+    top: 52px; left: 72px;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    color: var(--grey);
+    font-weight: 400;
+  }
+
+  .s1-title {
+    position: absolute;
+    top: 110px; left: 72px;
+    width: 700px;
+    line-height: 1.18;
+  }
+  .s1-title .line1 {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--white);
+    display: block;
+  }
+  .s1-title .line2 {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--cyan);
+    display: block;
+  }
+  .s1-title .line3 {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--white);
+    display: block;
+  }
+
+  .s1-rule {
+    position: absolute;
+    top: 342px; left: 72px;
+    width: 140px; height: 4px;
+    background: var(--cyan);
+    border-radius: 2px;
+  }
+
+  .s1-authors {
+    position: absolute;
+    top: 382px; left: 72px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.3px;
+  }
+
+  .s1-dept {
+    position: absolute;
+    top: 418px; left: 72px;
+    font-size: 15px;
+    color: var(--grey);
+    line-height: 1.6;
+  }
+
+  .s1-term {
+    position: absolute;
+    top: 530px; left: 72px;
+    font-size: 15px;
+    color: var(--grey);
+  }
+
+  /* UofA logo block */
+  .uofa-logo {
+    position: absolute;
+    bottom: 28px;
+    right: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .uofa-logo .uofa-bear {
+    width: 52px;
+    height: 52px;
+  }
+  .uofa-logo .uofa-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--cyan2);
+    text-transform: uppercase;
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CONTENT SLIDE shared styles
+  ══════════════════════════════════════════════════════════ */
+  .slide-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(90deg, #0f1745 0%, #0b0f2e 100%);
+    border-bottom: 3px solid var(--cyan);
+    display: flex;
+    align-items: center;
+    padding: 0 64px;
+    gap: 16px;
+  }
+  .slide-header .dot {
+    width: 10px; height: 10px;
+    background: var(--cyan);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .slide-header h2 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: 0.3px;
+  }
+  .slide-header .tag {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--cyan);
+    letter-spacing: 1.5px;
+    opacity: 0.8;
+    text-transform: uppercase;
+  }
+
+  .slide-body {
+    position: absolute;
+    top: 80px; left: 64px; right: 64px; bottom: 40px;
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    padding-top: 28px;
+  }
+
+  /* ── Two-column layout ───── */
+  .col { flex: 1; }
+  .col-wide { flex: 1.4; }
+  .col-narrow { flex: 0.6; }
+
+  /* ── Content cards ─────── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,200,232,0.15);
+    border-left: 3px solid var(--cyan);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .card p, .card li {
+    font-size: 14px;
+    color: var(--grey);
+    line-height: 1.65;
+  }
+  .card ul { padding-left: 16px; }
+  .card li { margin-bottom: 4px; }
+  .card .hi { color: var(--white); font-weight: 600; }
+
+  /* ── Stat boxes ─────────── */
+  .stat-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .stat-box {
+    flex: 1;
+    background: rgba(0,200,232,0.07);
+    border: 1px solid rgba(0,200,232,0.25);
+    border-radius: 8px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .stat-box .val {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--cyan);
+  }
+  .stat-box .lbl {
+    font-size: 11px;
+    color: var(--grey);
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  /* ── Method badge ─────── */
+  .method-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .method-badge {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,200,232,0.2);
+    border-radius: 8px;
+    padding: 14px 12px;
+  }
+  .method-badge .mname {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 6px;
+  }
+  .method-badge .mpaper {
+    font-size: 11px;
+    color: var(--grey);
+    margin-bottom: 8px;
+  }
+  .method-badge .mdesc {
+    font-size: 12px;
+    color: #c8d8e8;
+    line-height: 1.5;
+  }
+
+  /* ── Result image ───────── */
+  .result-img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(0,200,232,0.2);
+    display: block;
+  }
+  .img-caption {
+    font-size: 11px;
+    color: var(--grey);
+    text-align: center;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Table ──────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: rgba(0,200,232,0.12);
+    color: var(--cyan);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(0,200,232,0.3);
+  }
+  td {
+    padding: 7px 12px;
+    color: var(--grey);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .td-best { color: var(--cyan); font-weight: 700; }
+  .td-hi   { color: var(--white); }
+
+  /* ── Pipeline arrow ──────── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 18px 0;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .pipe-box {
+    background: rgba(0,200,232,0.1);
+    border: 1px solid rgba(0,200,232,0.3);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--white);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .pipe-arrow {
+    color: var(--cyan);
+    font-size: 18px;
+    padding: 0 6px;
+    flex-shrink: 0;
+  }
+
+  /* ── Conclusion bullet ──── */
+  .finding {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .finding .num {
+    background: var(--cyan);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .finding .text {
+    font-size: 14px;
+    color: #c8d8e8;
+    line-height: 1.55;
+  }
+  .finding .text strong { color: var(--white); }
+
+  /* ── Slide label bottom ── */
+  .slide-label {
+    position: absolute;
+    bottom: 14px;
+    left: 64px;
+    font-size: 11px;
+    color: var(--grey);
+    opacity: 0.4;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Controls ────────────────────────────────────────── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #111;
+    padding: 10px 20px;
+    border-radius: 8px;
+    width: 1280px;
+  }
+  .controls button {
+    background: #1a2560;
+    border: 1px solid rgba(0,200,232,0.3);
+    color: var(--cyan);
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  .controls button:hover { background: #243070; }
+  .controls .slide-indicator {
+    color: var(--grey);
+    font-size: 13px;
+    margin: 0 auto;
+  }
+  .controls .fullscreen-btn {
+    margin-left: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <button onclick="prevSlide()">◀ Prev</button>
+  <span class="slide-indicator" id="indicator">Slide 1 / 8</span>
+  <button onclick="nextSlide()">Next ▶</button>
+  <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-1">
+  <!-- Background geometry -->
+  <svg class="bg-svg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <radialGradient id="rg1" cx="75%" cy="60%" r="55%">
+        <stop offset="0%"  stop-color="#1a3060" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#0b0f2e" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1280" height="720" fill="#0b0f2e"/>
+    <rect width="1280" height="720" fill="url(#rg1)"/>
+    <!-- Subtle grid lines -->
+    <g stroke="#1a2560" stroke-width="0.5" opacity="0.5">
+      <line x1="0" y1="180" x2="1280" y2="180"/>
+      <line x1="0" y1="360" x2="1280" y2="360"/>
+      <line x1="0" y1="540" x2="1280" y2="540"/>
+      <line x1="320" y1="0" x2="320" y2="720"/>
+      <line x1="640" y1="0" x2="640" y2="720"/>
+      <line x1="960" y1="0" x2="960" y2="720"/>
+    </g>
+    <!-- Particle dots -->
+    <g fill="#1e3070" opacity="0.7">
+      <circle cx="820" cy="80"  r="2"/><circle cx="900" cy="140" r="1.5"/>
+      <circle cx="1050" cy="60" r="2"/><circle cx="980" cy="200" r="1.5"/>
+      <circle cx="750" cy="160" r="1"/><circle cx="870" cy="240" r="2"/>
+      <circle cx="1100" cy="160" r="1.5"/><circle cx="830" cy="300" r="1"/>
+      <circle cx="1150" cy="280" r="2"/><circle cx="970" cy="340" r="1.5"/>
+      <circle cx="1200" cy="400" r="1"/><circle cx="780" cy="420" r="2"/>
+      <circle cx="1050" cy="460" r="1.5"/><circle cx="900" cy="500" r="1"/>
+    </g>
+    <!-- Wireframe 3D head (right side) -->
+    <g stroke="#00c8e8" stroke-width="1" fill="none" opacity="0.55" transform="translate(860,80)">
+      <!-- Outer head shape -->
+      <ellipse cx="200" cy="240" rx="175" ry="210" stroke-width="1.2"/>
+      <!-- Facial structure lines -->
+      <line x1="200" y1="30"  x2="60"  y2="150"/>
+      <line x1="200" y1="30"  x2="340" y2="150"/>
+      <line x1="60"  y1="150" x2="25"  y2="300"/>
+      <line x1="340" y1="150" x2="375" y2="300"/>
+      <line x1="25"  y1="300" x2="100" y2="440"/>
+      <line x1="375" y1="300" x2="300" y2="440"/>
+      <line x1="100" y1="440" x2="200" y2="450"/>
+      <line x1="300" y1="440" x2="200" y2="450"/>
+      <!-- Cross lines -->
+      <line x1="60"  y1="150" x2="340" y2="150"/>
+      <line x1="25"  y1="300" x2="375" y2="300"/>
+      <line x1="100" y1="440" x2="300" y2="440"/>
+      <!-- Vertical spine -->
+      <line x1="200" y1="30"  x2="200" y2="450"/>
+      <!-- Eye sockets -->
+      <ellipse cx="140" cy="210" rx="38" ry="28" stroke-width="1.2"/>
+      <ellipse cx="260" cy="210" rx="38" ry="28" stroke-width="1.2"/>
+      <!-- Nose -->
+      <line x1="200" y1="240" x2="175" y2="310"/>
+      <line x1="200" y1="240" x2="225" y2="310"/>
+      <line x1="175" y1="310" x2="225" y2="310"/>
+      <!-- Diagonal polygon faces -->
+      <line x1="60"  y1="150" x2="140" y2="182"/>
+      <line x1="340" y1="150" x2="260" y2="182"/>
+      <line x1="140" y1="238" x2="25"  y2="300"/>
+      <line x1="260" y1="238" x2="375" y2="300"/>
+    </g>
+    <!-- Cyan accent dots on wireframe -->
+    <g fill="#00c8e8" opacity="0.8">
+      <circle cx="1060" cy="110" r="3"/><circle cx="1200" cy="230" r="3"/>
+      <circle cx="885"  cy="230" r="3"/><circle cx="1235" cy="380" r="3"/>
+      <circle cx="960"  cy="520" r="3"/><circle cx="1160" cy="520" r="3"/>
+      <circle cx="1060" cy="530" r="3"/>
+    </g>
+  </svg>
+
+  <div class="s1-tag">MM 805 — Final Project Presentation</div>
+
+  <div class="s1-title">
+    <span class="line1">Exploration of 3D Object</span>
+    <span class="line2">Reconstruction Under</span>
+    <span class="line3">Limited Visual Observations</span>
+  </div>
+
+  <div class="s1-rule"></div>
+
+  <div class="s1-authors">Md Fatinfaiaz Isty &nbsp;&amp;&nbsp; Azmal Awasaf</div>
+
+  <div class="s1-dept">
+    MSc in Computing Science, Specialization in Multimedia<br>
+    Department of Computing Science &nbsp;•&nbsp; University of Alberta
+  </div>
+
+  <div class="s1-term">Winter 2026</div>
+
+  <!-- UofA Logo -->
+  <div class="uofa-logo">
+    <svg class="uofa-bear" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Bear head silhouette -->
+      <circle cx="50" cy="52" r="30" fill="#00c8e8" opacity="0.15" stroke="#00c8e8" stroke-width="1.5"/>
+      <!-- Ears -->
+      <circle cx="30" cy="27" r="10" fill="#00c8e8" opacity="0.2" stroke="#00c8e8" stroke-width="1.5"/>
+      <circle cx="70" cy="27" r="10" fill="#00c8e8" opacity="0.2" stroke="#00c8e8" stroke-width="1.5"/>
+      <!-- Inner ears -->
+      <circle cx="30" cy="27" r="5"  fill="#00c8e8" opacity="0.4"/>
+      <circle cx="70" cy="27" r="5"  fill="#00c8e8" opacity="0.4"/>
+      <!-- Eyes -->
+      <circle cx="40" cy="48" r="4"  fill="#00c8e8"/>
+      <circle cx="60" cy="48" r="4"  fill="#00c8e8"/>
+      <!-- Nose -->
+      <ellipse cx="50" cy="60" rx="7" ry="5" fill="#00c8e8" opacity="0.8"/>
+      <!-- Mouth -->
+      <path d="M43 66 Q50 72 57 66" stroke="#00c8e8" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="uofa-text">UAlberta</div>
+  </div>
+
+  <div class="slide-num">1 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 2 — Motivation & Problem
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-2">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Motivation &amp; Problem Statement</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body">
+    <div class="col">
+      <div class="card">
+        <h3>The Core Challenge</h3>
+        <p>Reconstructing 3D geometry from sparse 2D observations is <span class="hi">inherently ill-posed</span> — depth ambiguity and occlusion make it impossible to recover a unique solution from limited views.</p>
+      </div>
+      <div class="card">
+        <h3>Why It Matters</h3>
+        <ul>
+          <li>Autonomous vehicles & robotics need fast 3D scene understanding</li>
+          <li>AR/VR applications require real-time object reconstruction</li>
+          <li>Medical imaging reconstructs 3D anatomy from 2D scans</li>
+          <li>E-commerce needs 3D product previews from product photos</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Research Question</h3>
+        <p>How does reconstruction quality evolve as the number of input views increases from <span class="hi">1 → 5</span>, and which method best handles limited observations?</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="stat-row">
+        <div class="stat-box"><div class="val">3</div><div class="lbl">Methods<br>Compared</div></div>
+        <div class="stat-box"><div class="val">3</div><div class="lbl">Object<br>Categories</div></div>
+        <div class="stat-box"><div class="val">1→5</div><div class="lbl">Input<br>Views</div></div>
+        <div class="stat-box"><div class="val">32³</div><div class="lbl">Voxel<br>Resolution</div></div>
+      </div>
+      <div class="card">
+        <h3>Evaluation Pipeline</h3>
+        <div class="pipeline">
+          <div class="pipe-box">Input Images<br><small>(1–5 views)</small></div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box">2D Encoder</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box">3D Decoder</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box">32³ Voxels</div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-box">IoU / F-score</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Datasets</h3>
+        <ul>
+          <li><span class="hi">Synthetic:</span> Procedural airplane / car / chair shapes — 300 samples, runs out-of-the-box</li>
+          <li><span class="hi">ShapeNet:</span> Stanford rendered images + 32³ voxel GT (optional)</li>
+          <li><span class="hi">Real photos:</span> In-the-wild images via TripoSR demo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">2 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 3 — Methods
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-3">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Methods &amp; Architectures</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body" style="flex-direction:column; gap:16px;">
+    <div class="method-row">
+      <div class="method-badge">
+        <div class="mname">3D-R2N2</div>
+        <div class="mpaper">Choy et al., ECCV 2016 &nbsp;·&nbsp; 17.5M parameters</div>
+        <div class="mdesc">Recurrent 3D-GRU that <strong style="color:#fff">sequentially updates</strong> a voxel grid as each new view arrives. Encoder compresses 128×128 images to 1024-d features; 3D transposed convolutions decode to 32³ occupancy.</div>
+      </div>
+      <div class="method-badge">
+        <div class="mname">Pix2Vox</div>
+        <div class="mpaper">Xie et al., ICCV 2019 &nbsp;·&nbsp; 12.7M parameters</div>
+        <div class="mdesc">Context-aware fusion: each view produces an independent coarse volume; a <strong style="color:#fff">scoring network</strong> learns per-voxel weights to adaptively fuse views. A 3D residual refiner sharpens the result.</div>
+      </div>
+      <div class="method-badge" style="border-color:rgba(0,200,232,0.4);">
+        <div class="mname" style="color:#4fd8f0;">TripoSR <span style="font-size:11px;color:#666;font-weight:400;">(New Baseline)</span></div>
+        <div class="mpaper">Tochilkin et al., 2024 &nbsp;·&nbsp; ~1GB weights &nbsp;·&nbsp; Zero-shot</div>
+        <div class="mdesc">Feed-forward transformer trained on Objaverse. Single image → <strong style="color:#fff">triplane NeRF</strong> in one forward pass. Density field queried at grid points for voxel evaluation; mesh extracted via marching cubes.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:16px;">
+      <div class="card" style="flex:1;">
+        <h3>Training Setup (R2N2 &amp; Pix2Vox)</h3>
+        <p>Loss: <span class="hi">Binary Cross-Entropy</span> on voxel occupancy &nbsp;|&nbsp; Optimizer: <span class="hi">Adam</span> (lr=1e-4) &nbsp;|&nbsp; Epochs: 20 &nbsp;|&nbsp; Best checkpoint saved &amp; reused</p>
+      </div>
+      <div class="card" style="flex:1;">
+        <h3>TripoSR — No Training Needed</h3>
+        <p>Pre-trained on <span class="hi">Objaverse (800K+ objects)</span>. Inference: ~0.5–1s/image on GPU. Background removal via <span class="hi">rembg</span>, composited on gray (0.5) background as per official pipeline.</p>
+      </div>
+      <div class="card" style="flex:0.7; border-left-color:#4fd8f0;">
+        <h3>Key Difference</h3>
+        <p>R2N2 &amp; Pix2Vox are <span class="hi">trained on this dataset</span>.<br>TripoSR is <span class="hi">zero-shot</span> — never sees our data.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">3 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 4 — Quantitative Results
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-4">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Quantitative Results — IoU &amp; F-score</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body">
+    <div class="col">
+      <div class="card" style="padding:0; overflow:hidden;">
+        <table>
+          <thead>
+            <tr><th>Views</th><th>R2N2 IoU</th><th>Pix2Vox IoU</th><th>R2N2 F</th><th>Pix2Vox F</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="td-hi">1</td><td>0.024</td><td class="td-best">0.639</td><td>0.043</td><td class="td-best">0.763</td></tr>
+            <tr><td class="td-hi">2</td><td>0.103</td><td class="td-best">0.653</td><td>0.166</td><td class="td-best">0.775</td></tr>
+            <tr><td class="td-hi">3</td><td>0.140</td><td class="td-best">0.669</td><td>0.220</td><td class="td-best">0.789</td></tr>
+            <tr><td class="td-hi">4</td><td>0.148</td><td class="td-best">0.668</td><td>0.230</td><td class="td-best">0.788</td></tr>
+            <tr><td class="td-hi">5</td><td>0.149</td><td class="td-best">0.670</td><td>0.231</td><td class="td-best">0.790</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Overall Mean IoU</h3>
+        <div style="display:flex; gap:10px; margin-top:8px;">
+          <div class="stat-box" style="flex:1;"><div class="val" style="font-size:20px;color:#888;">0.113</div><div class="lbl">3D-R2N2</div></div>
+          <div class="stat-box" style="flex:1;"><div class="val" style="font-size:20px;">0.660</div><div class="lbl">Pix2Vox</div></div>
+          <div class="stat-box" style="flex:1;border-color:rgba(0,200,232,0.5);"><div class="val" style="font-size:20px;">0.660</div><div class="lbl">Adaptive</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <img src="results/iou_fscore_vs_views.png" class="result-img" alt="IoU vs Views">
+      <div class="img-caption">IoU &amp; F-score vs. Number of Input Views — both methods improve with more views</div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Key Observation</h3>
+        <p>Pix2Vox <span class="hi">outperforms R2N2 by ~26× at 1 view</span> (0.639 vs 0.024). Diminishing returns set in beyond 3 views for both methods.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">4 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 5 — Per-Category Analysis
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-5">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Per-Category Performance Analysis</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body">
+    <div class="col-wide">
+      <img src="results/per_category_iou.png" class="result-img" style="max-height:340px;width:auto;margin:0 auto;display:block;" alt="Per-category">
+      <div class="img-caption">Per-category IoU (1→5 views): Airplane · Car · Chair</div>
+    </div>
+    <div class="col-narrow">
+      <div class="card">
+        <h3>Airplane</h3>
+        <p>R2N2: <span class="hi">0.004 → 0.103</span> (+0.099)<br>Pix2Vox: <span class="hi">0.618 → 0.657</span> (+0.038)<br><span style="color:#4fd8f0;">Winner: Pix2Vox</span></p>
+      </div>
+      <div class="card">
+        <h3>Car</h3>
+        <p>R2N2: <span class="hi">0.068 → 0.335</span> (+0.267)<br>Pix2Vox: <span class="hi">0.763 → 0.773</span> (+0.010)<br><span style="color:#4fd8f0;">Winner: Pix2Vox</span></p>
+      </div>
+      <div class="card">
+        <h3>Chair</h3>
+        <p>R2N2: <span class="hi">0.000 → 0.010</span> (+0.010)<br>Pix2Vox: <span class="hi">0.537 → 0.580</span> (+0.043)<br><span style="color:#4fd8f0;">Winner: Pix2Vox</span></p>
+      </div>
+      <div class="card" style="border-left-color:#ff6b6b;">
+        <h3>Failure Mode</h3>
+        <p style="color:#ffaaaa;">Chairs are hardest — thin legs &amp; heavy occlusion cause near-zero IoU for R2N2 even at 5 views.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">5 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 6 — TripoSR Comparison
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-6">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>TripoSR — Modern Baseline Comparison</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body">
+    <div class="col">
+      <img src="results/all_methods_1view_comparison.png" class="result-img" alt="All methods 1-view">
+      <div class="img-caption">IoU &amp; F-score @ 1 view — all three methods</div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Why TripoSR Scores Lower on Synthetic Data</h3>
+        <ul>
+          <li>Trained on <span class="hi">Objaverse (real photos)</span> — synthetic silhouettes are out-of-distribution</li>
+          <li>Orientation mismatch — no canonical alignment with GT voxels</li>
+          <li>Optimized for <span class="hi">mesh visual quality</span>, not voxel IoU</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead><tr><th>Method</th><th>Training?</th><th>IoU (1-view)</th><th>Speed</th></tr></thead>
+          <tbody>
+            <tr><td class="td-hi">3D-R2N2</td><td>Yes</td><td>0.024</td><td>~5 ms</td></tr>
+            <tr><td class="td-hi">Pix2Vox</td><td>Yes</td><td class="td-best">0.639</td><td>~5 ms</td></tr>
+            <tr><td class="td-hi" style="color:#4fd8f0;">TripoSR</td><td style="color:#4fd8f0;">No (zero-shot)</td><td>see notebook</td><td>~500 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card" style="margin-top:14px; border-left-color:#4fd8f0;">
+        <h3>Where TripoSR Wins</h3>
+        <ul>
+          <li><span class="hi">Real photographs</span> — trained on realistic data</li>
+          <li>Produces <span class="hi">high-quality meshes</span> (.obj), not just voxels</li>
+          <li>No training required — works on <span class="hi">any object category</span></li>
+          <li>Handles in-the-wild images via background removal</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Adaptive Selection (R2N2 + Pix2Vox)</h3>
+        <p>Routes each (category, views) pair to the best model. <span class="hi">Always selects Pix2Vox</span> — confirming its uniform dominance on synthetic data.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">6 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 7 — Qualitative Results
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-7">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Qualitative Results — 3D Voxel Visualisation</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body" style="flex-direction:column; gap:14px;">
+    <div style="display:flex; gap:16px; height:100%;">
+      <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+        <img src="results/qualitative_airplane_25.png" class="result-img" style="flex:1;object-fit:contain;" alt="Airplane qualitative">
+        <div class="img-caption">Airplane — 1→5 views: R2N2 (left) vs. Pix2Vox (center) vs. GT (right)</div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+        <img src="results/iou_heatmap.png" class="result-img" style="flex:1;object-fit:contain;" alt="Heatmap">
+        <div class="img-caption">IoU Heatmap — method × category × view count</div>
+      </div>
+    </div>
+    <div class="card" style="margin:0;">
+      <h3>Observations</h3>
+      <p style="display:inline;">Single-view produces <span class="hi">blobby outputs</span> for R2N2. Pix2Vox maintains shape even at 1 view. Both improve with more views but show <span class="hi">diminishing returns beyond 3 views</span>. Thin structures (chair legs) remain consistently under-reconstructed.</p>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">7 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SLIDE 8 — Conclusions & Future Work
+══════════════════════════════════════════════════════════ -->
+<div class="slide" id="slide-8">
+  <svg class="bg-svg" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#0b0f2e"/><g stroke="#1a2560" stroke-width="0.5" opacity="0.3"><line x1="0" y1="180" x2="1280" y2="180"/><line x1="0" y1="360" x2="1280" y2="360"/><line x1="0" y1="540" x2="1280" y2="540"/><line x1="320" y1="0" x2="320" y2="720"/><line x1="640" y1="0" x2="640" y2="720"/><line x1="960" y1="0" x2="960" y2="720"/></g></svg>
+  <div class="slide-header">
+    <div class="dot"></div>
+    <h2>Conclusions &amp; Future Work</h2>
+    <span class="tag">MM 805 · Final Project</span>
+  </div>
+  <div class="slide-body">
+    <div class="col">
+      <p style="font-size:13px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;">Key Findings</p>
+      <div class="finding"><div class="num">1</div><div class="text"><strong>More views = better quality</strong> — but diminishing returns appear beyond 3–4 views in all categories.</div></div>
+      <div class="finding"><div class="num">2</div><div class="text"><strong>Pix2Vox dominates uniformly</strong> — context-aware fusion outperforms recurrent GRU across every (category, view) pair.</div></div>
+      <div class="finding"><div class="num">3</div><div class="text"><strong>Category difficulty varies significantly</strong> — cars reconstruct best; chairs (thin legs, high occlusion) are hardest for all methods.</div></div>
+      <div class="finding"><div class="num">4</div><div class="text"><strong>TripoSR excels on real images</strong> — zero-shot performance on in-the-wild photos surpasses trained voxel models in visual quality.</div></div>
+      <div class="finding"><div class="num">5</div><div class="text"><strong>Voxel resolution is the bottleneck</strong> — 32³ limits geometric detail; TripoSR's mesh output is inherently higher fidelity.</div></div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>Limitations</h3>
+        <ul>
+          <li>32³ voxel resolution caps geometric fidelity for all methods</li>
+          <li>Synthetic silhouettes are simpler than real ShapeNet renders</li>
+          <li>TripoSR IoU comparison is domain-mismatched (unfair but informative)</li>
+          <li>Training on 3 categories only — limited generalization scope</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <h3>Future Work</h3>
+        <ul>
+          <li>Benchmark <span class="hi">3D Gaussian Splatting</span> (SplatterImage, pixelSplat) under identical few-view conditions</li>
+          <li><span class="hi">Optimal viewpoint selection</span> — which N angles maximize reconstruction quality?</li>
+          <li><span class="hi">Web platform</span> — upload a photo, get a 3D mesh (inference.py backend ready)</li>
+          <li>Evaluate on <span class="hi">real ShapeNet data</span> for fair cross-method comparison</li>
+        </ul>
+      </div>
+      <div class="card" style="margin-top:14px; background:rgba(0,200,232,0.06); border-left-color:#4fd8f0;">
+        <h3>Acknowledgements</h3>
+        <p style="font-size:13px; color:#c8d8e8;">MM 805 — Multimedia &nbsp;|&nbsp; University of Alberta &nbsp;|&nbsp; Winter 2026<br>
+        Choy et al. (ECCV 2016) &nbsp;·&nbsp; Xie et al. (ICCV 2019) &nbsp;·&nbsp; Tochilkin et al. (2024)</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-label">MM 805 · University of Alberta · Winter 2026</div>
+  <div class="slide-num">8 / 8</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     NAVIGATION SCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+  const total = 8;
+  let current = 1;
+
+  function showSlide(n) {
+    for (let i = 1; i <= total; i++) {
+      document.getElementById('slide-' + i).style.display = (i === n) ? 'block' : 'none';
+    }
+    document.getElementById('indicator').textContent = `Slide ${n} / ${total}`;
+    current = n;
+  }
+
+  function nextSlide() { if (current < total) showSlide(current + 1); }
+  function prevSlide() { if (current > 1)     showSlide(current - 1); }
+
+  function toggleFullscreen() {
+    const slide = document.getElementById('slide-' + current);
+    if (!document.fullscreenElement) {
+      slide.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown'  || e.key === ' ') nextSlide();
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                      prevSlide();
+  });
+
+  // Start on slide 1
+  showSlide(1);
+</script>
+
+</body>
+</html>
