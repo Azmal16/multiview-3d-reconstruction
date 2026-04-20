@@ -1,7 +1,35 @@
-torch
-torchvision
-numpy
-matplotlib
-scipy
-tqdm
-Pillow
+# ── Core ──────────────────────────────────────────────────────────────────────
+torch>=2.1.0
+torchvision>=0.16.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+scipy>=1.11.0
+tqdm>=4.65.0
+Pillow>=10.0.0
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+jupyter
+notebook
+ipykernel
+
+# ── TripoSR dependencies ──────────────────────────────────────────────────────
+omegaconf>=2.3.0
+einops>=0.7.0
+transformers>=4.38.0
+huggingface_hub>=0.21.0
+diffusers>=0.26.0
+
+# ── Background removal (rembg) ────────────────────────────────────────────────
+rembg[gpu]          # use `rembg` (no [gpu]) if no ONNX Runtime GPU support
+
+# ── Mesh / geometry ───────────────────────────────────────────────────────────
+trimesh>=4.0.0
+scikit-image>=0.21.0     # marching-cubes shim (replaces torchmcubes C++ ext)
+
+# ── Media ─────────────────────────────────────────────────────────────────────
+imageio>=2.31.0
+imageio[ffmpeg]
+
+# ── Optional: ONNX Runtime (needed by rembg) ──────────────────────────────────
+onnxruntime>=1.16.0      # CPU inference for rembg (avoids GPU OOM)
+# onnxruntime-gpu        # uncomment only if rembg should run on GPU
